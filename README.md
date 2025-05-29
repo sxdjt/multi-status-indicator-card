@@ -2,6 +2,8 @@
 
 A compact, configurable [Home Assistant](https://www.home-assistant.io/) custom card that displays multiple on/off entity states as labeled icons in a flexible grid layout. Supports optional tap-to-toggle, state-based coloring, and last-changed timestamps.
 
+Yes, this is similar to the default HA [Glance card](https://www.home-assistant.io/dashboards/glance/), but I wanted something more compact.
+
 <img width="512" alt="Screenshot 2025-05-28 at 21 42 25" src="https://github.com/user-attachments/assets/bc2fc940-5a3e-447e-8830-225fa1f77708" />
 
 ---
