@@ -1,0 +1,11 @@
+{
+  "name": "Multi Status Indicator Card",
+  "content_in_root": false,
+  "filename": "multi-status-indicator-card.js",
+  "render_readme": true,
+  "description": "A compact Home Assistant card to show multiple on/off indicators with optional labels, last changed time, and toggle functionality.",
+  "domains": ["lovelace"],
+  "country": "US",
+  "zip_release": false,
+  "version": "0.1"
+}
