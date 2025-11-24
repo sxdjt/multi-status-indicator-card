@@ -52,7 +52,8 @@ class MultiStatusIndicatorCard extends HTMLElement {
       columns = 3,
       color_on = 'green',
       color_off = 'red',
-      title
+      title,
+      name_position = 'below'
     } = config;
 
     // Build styles inline for better performance
@@ -63,7 +64,7 @@ class MultiStatusIndicatorCard extends HTMLElement {
         ${title ? `<div style="font-size:14px;font-weight:600;margin:0 0 4px 0">${this._escapeHtml(title)}</div>` : ''}
         <div style="display:grid;grid-template-columns:repeat(${columns},1fr);gap:4px">
           ${config.items.map(item => this._renderItem(item, hass, {
-            icon_size, font_size, show_last_changed, color_on, color_off
+            icon_size, font_size, show_last_changed, color_on, color_off, name_position
           })).join('')}
         </div>
       </div>
@@ -87,9 +88,16 @@ class MultiStatusIndicatorCard extends HTMLElement {
       : (item.icon_off || 'mdi:toggle-switch-off');
     const name = item.name || stateObj.attributes.friendly_name || item.entity;
 
+    const nameHtml = `<div>${this._escapeHtml(name)}</div>`;
+    const iconHtml = `<ha-icon icon="${icon}" style="color:${color};width:${options.icon_size};height:${options.icon_size};margin-bottom:2px"></ha-icon>`;
+    
     const lastChangedHtml = options.show_last_changed 
       ? `<div style="font-size:10px;color:var(--secondary-text-color)">${this._formatTime(stateObj.last_changed, hass)}</div>`
       : '';
+
+    const content = options.name_position === 'above' 
+      ? `${nameHtml}${iconHtml}${lastChangedHtml}`
+      : `${iconHtml}${nameHtml}${lastChangedHtml}`;
 
     return `
       <div class="status-item" data-entity="${item.entity}" 
@@ -97,9 +105,7 @@ class MultiStatusIndicatorCard extends HTMLElement {
                   font-size:${options.font_size};padding:4px;border-radius:6px;cursor:pointer;
                   transition:transform 0.1s ease-in-out"
            title="Tap to toggle ${this._escapeHtml(name)}">
-        <ha-icon icon="${icon}" style="color:${color};width:${options.icon_size};height:${options.icon_size};margin-bottom:2px"></ha-icon>
-        <div>${this._escapeHtml(name)}</div>
-        ${lastChangedHtml}
+        ${content}
       </div>
     `;
   }
