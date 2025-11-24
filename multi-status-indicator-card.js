@@ -1,3 +1,16 @@
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'multi-status-indicator-card',
+  name: 'Multi Status Indicator Card',
+  description: 'A grid display for multiple entity status indicators with toggle support'
+});
+
+console.info(
+  `%c MULTI-STATUS-INDICATOR-CARD %c v2.0 `,
+  'color: green; font-weight: bold; background: black',
+  'color: white; font-weight: bold; background: dimgray'
+);
+
 class MultiStatusIndicatorCard extends HTMLElement {
   constructor() {
     super();
@@ -64,7 +77,8 @@ class MultiStatusIndicatorCard extends HTMLElement {
     const stateObj = hass.states[item.entity];
     if (!stateObj) return '';
 
-    const isOn = stateObj.state === 'on';
+    const state = stateObj.state;
+    const isOn = ['on', 'unlocked', 'open', 'home', 'playing'].includes(state);
     const color = isOn 
       ? (item.color_on || options.color_on)
       : (item.color_off || options.color_off);
@@ -94,7 +108,39 @@ class MultiStatusIndicatorCard extends HTMLElement {
     this._root.querySelectorAll('.status-item').forEach(box => {
       box.addEventListener('click', (e) => {
         const entity = e.currentTarget.dataset.entity;
-        this._hass.callService('switch', 'toggle', { entity_id: entity });
+        const domain = entity.split('.')[0];
+        
+        // Handle different entity domains
+        const domainServices = {
+          switch: 'toggle',
+          light: 'toggle',
+          input_boolean: 'toggle',
+          automation: 'toggle',
+          fan: 'toggle',
+          cover: 'toggle',
+          lock: (state) => state === 'locked' ? 'unlock' : 'lock',
+          climate: (state) => state === 'off' ? 'turn_on' : 'turn_off',
+          media_player: (state) => state === 'off' ? 'turn_on' : 'turn_off'
+        };
+        
+        const stateObj = this._hass.states[entity];
+        if (!stateObj) return;
+        
+        let service = domainServices[domain];
+        if (typeof service === 'function') {
+          service = service(stateObj.state);
+        }
+        
+        if (service) {
+          this._hass.callService(domain, service, { entity_id: entity });
+        } else {
+          // Fallback: try generic toggle or turn_on/turn_off
+          const hasToggle = ['on', 'off'].includes(stateObj.state);
+          if (hasToggle) {
+            const fallbackService = stateObj.state === 'off' ? 'turn_on' : 'turn_off';
+            this._hass.callService(domain, fallbackService, { entity_id: entity });
+          }
+        }
       });
     });
   }
