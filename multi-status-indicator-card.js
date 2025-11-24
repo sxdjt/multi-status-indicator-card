@@ -1,5 +1,15 @@
 class MultiStatusIndicatorCard extends HTMLElement {
+  constructor() {
+    super();
+    this._config = null;
+    this._hass = null;
+    this._root = null;
+  }
+
   setConfig(config) {
+    if (!config.items || !Array.isArray(config.items)) {
+      throw new Error('items array is required');
+    }
     this._config = config;
     this._render();
   }
@@ -11,102 +21,113 @@ class MultiStatusIndicatorCard extends HTMLElement {
     }
   }
 
-  _render() {
-    const config = this._config;
-    const hass = this._hass;
-    if (!config || !hass) return;
-
-    const iconSize = config.icon_size || '20px';
-    const fontSize = config.font_size || '11px';
-    const showLastChanged = config.show_last_changed !== false;
-
-    const card = document.createElement('ha-card');
-    card.style.padding = '4px';
-    card.style.margin = '0';
-    card.style.boxShadow = 'none';
-    card.style.background = 'none';
-
-    const container = document.createElement('div');
-    container.style.padding = '4px';
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.gap = '2px';
-
-    if (config.title) {
-      const title = document.createElement('div');
-      title.textContent = config.title;
-      title.style.fontSize = '14px';
-      title.style.fontWeight = '600';
-      title.style.margin = '0';
-      title.style.padding = '0';
-      title.style.marginBottom = '4px';
-      container.appendChild(title);
+  connectedCallback() {
+    if (!this._root) {
+      this._root = document.createElement('ha-card');
+      this.appendChild(this._root);
     }
+  }
 
-    const grid = document.createElement('div');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = `repeat(${config.columns || 3}, 1fr)`;
-    grid.style.gap = '4px';
+  _render() {
+    const { _config: config, _hass: hass } = this;
+    if (!config || !hass || !this._root) return;
 
-    config.items.forEach((item) => {
-      const stateObj = hass.states[item.entity];
-      if (!stateObj) return;
+    const {
+      icon_size = '20px',
+      font_size = '11px',
+      show_last_changed = true,
+      columns = 3,
+      color_on = 'green',
+      color_off = 'red',
+      title
+    } = config;
 
-      const isOn = stateObj.state === 'on';
-      const color = isOn ? config.color_on || item.color_on || 'green' : config.color_off || item.color_off || 'red';
+    // Build styles inline for better performance
+    this._root.style.cssText = 'padding:4px;margin:0;box-shadow:none;background:none';
 
-      const box = document.createElement('div');
-      box.style.display = 'flex';
-      box.style.flexDirection = 'column';
-      box.style.alignItems = 'center';
-      box.style.justifyContent = 'center';
-      box.style.fontSize = fontSize;
-      box.style.padding = '4px';
-      box.style.borderRadius = '6px';
-      box.style.cursor = 'pointer';
-      box.style.transition = 'transform 0.1s ease-in-out';
-      box.title = `Tap to toggle ${item.name || stateObj.attributes.friendly_name || item.entity}`;
+    const html = `
+      <div style="padding:4px;display:flex;flex-direction:column;gap:2px">
+        ${title ? `<div style="font-size:14px;font-weight:600;margin:0 0 4px 0">${this._escapeHtml(title)}</div>` : ''}
+        <div style="display:grid;grid-template-columns:repeat(${columns},1fr);gap:4px">
+          ${config.items.map(item => this._renderItem(item, hass, {
+            icon_size, font_size, show_last_changed, color_on, color_off
+          })).join('')}
+        </div>
+      </div>
+    `;
 
-      box.addEventListener('click', () => {
-        hass.callService('switch', 'toggle', { entity_id: item.entity });
+    this._root.innerHTML = html;
+    this._attachEventListeners();
+  }
+
+  _renderItem(item, hass, options) {
+    const stateObj = hass.states[item.entity];
+    if (!stateObj) return '';
+
+    const isOn = stateObj.state === 'on';
+    const color = isOn 
+      ? (item.color_on || options.color_on)
+      : (item.color_off || options.color_off);
+    const icon = isOn 
+      ? (item.icon_on || 'mdi:toggle-switch')
+      : (item.icon_off || 'mdi:toggle-switch-off');
+    const name = item.name || stateObj.attributes.friendly_name || item.entity;
+
+    const lastChangedHtml = options.show_last_changed 
+      ? `<div style="font-size:10px;color:var(--secondary-text-color)">${this._formatTime(stateObj.last_changed, hass)}</div>`
+      : '';
+
+    return `
+      <div class="status-item" data-entity="${item.entity}" 
+           style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                  font-size:${options.font_size};padding:4px;border-radius:6px;cursor:pointer;
+                  transition:transform 0.1s ease-in-out"
+           title="Tap to toggle ${this._escapeHtml(name)}">
+        <ha-icon icon="${icon}" style="color:${color};width:${options.icon_size};height:${options.icon_size};margin-bottom:2px"></ha-icon>
+        <div>${this._escapeHtml(name)}</div>
+        ${lastChangedHtml}
+      </div>
+    `;
+  }
+
+  _attachEventListeners() {
+    this._root.querySelectorAll('.status-item').forEach(box => {
+      box.addEventListener('click', (e) => {
+        const entity = e.currentTarget.dataset.entity;
+        this._hass.callService('switch', 'toggle', { entity_id: entity });
       });
-
-      const icon = document.createElement('ha-icon');
-      icon.icon = isOn ? item.icon_on || 'mdi:toggle-switch' : item.icon_off || 'mdi:toggle-switch-off';
-      icon.style.color = color;
-      icon.style.width = iconSize;
-      icon.style.height = iconSize;
-      icon.style.marginBottom = '2px';
-
-      const label = document.createElement('div');
-      label.textContent = item.name || stateObj.attributes.friendly_name || item.entity;
-
-      box.appendChild(icon);
-      box.appendChild(label);
-
-      if (showLastChanged) {
-        const lastChanged = document.createElement('div');
-        const lastDate = new Date(stateObj.last_changed);
-        lastChanged.textContent = lastDate.toLocaleTimeString(hass.locale?.language || 'en-US', {
-          hour: 'numeric', minute: '2-digit'
-        });
-        lastChanged.style.fontSize = '10px';
-        lastChanged.style.color = 'var(--secondary-text-color)';
-        box.appendChild(lastChanged);
-      }
-
-      grid.appendChild(box);
     });
+  }
 
-    container.appendChild(grid);
-    card.innerHTML = '';
-    card.appendChild(container);
-    this.innerHTML = '';
-    this.appendChild(card);
+  _formatTime(timestamp, hass) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString(hass.locale?.language || 'en-US', {
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  _escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   getCardSize() {
-    return 1;
+    return Math.ceil((this._config?.items?.length || 0) / (this._config?.columns || 3));
+  }
+
+  static getConfigElement() {
+    return document.createElement('multi-status-indicator-card-editor');
+  }
+
+  static getStubConfig() {
+    return {
+      columns: 3,
+      items: [
+        { entity: 'switch.example', name: 'Example' }
+      ]
+    };
   }
 }
 
