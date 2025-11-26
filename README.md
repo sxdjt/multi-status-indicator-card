@@ -4,6 +4,8 @@ A compact, configurable [Home Assistant](https://www.home-assistant.io/) custom 
 
 Yes, this is similar to the default HA [Glance card](https://www.home-assistant.io/dashboards/glance/), but I wanted something more compact.
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=sxdjt&repository=multi-status-indicator-card)
+
 <img width="512" alt="Screenshot 2025-05-28 at 21 42 25" src="https://github.com/user-attachments/assets/bc2fc940-5a3e-447e-8830-225fa1f77708" />
 
 ---
