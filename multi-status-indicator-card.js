@@ -6,7 +6,7 @@ window.customCards.push({
 });
 
 console.info(
-  `%c MULTI-STATUS-INDICATOR-CARD %c v2.1 `,
+  `%c MULTI-STATUS-INDICATOR-CARD %c v2.2 `,
   'color: green; font-weight: bold; background: black',
   'color: white; font-weight: bold; background: dimgray'
 );
@@ -46,10 +46,31 @@ class MultiStatusIndicatorCard extends HTMLElement {
   }
 
   set hass(hass) {
+    const oldHass = this._hass;
     this._hass = hass;
-    if (this._config && this.isConnected) {
+
+    if (!this._config || !this.isConnected) {
+      return;
+    }
+
+    // Only render if this is the first hass set or if configured entities changed
+    if (!oldHass || this._hasEntitiesChanged(oldHass, hass)) {
       this._render();
     }
+  }
+
+  _hasEntitiesChanged(oldHass, newHass) {
+    // Get all entity IDs from config
+    const entityIds = this._config.items
+      .map(item => item.entity)
+      .filter(entity => entity);
+
+    // Check if any of our configured entities changed
+    return entityIds.some(entityId => {
+      const oldState = oldHass.states[entityId];
+      const newState = newHass.states[entityId];
+      return oldState !== newState;
+    });
   }
 
   connectedCallback() {
