@@ -1,4 +1,5 @@
 # Multi Status Indicator Card
+[![AI Assisted](https://img.shields.io/badge/AI-Claude%20Code-AAAAAA.svg)](https://claude.ai/code)
 
 A compact, configurable [Home Assistant](https://www.home-assistant.io/) custom card that displays multiple entity states as labeled icons in a flexible grid layout. Supports tap-to-toggle, state-based coloring, last-changed timestamps, and multiple entity types.
 
